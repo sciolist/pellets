@@ -15,7 +15,7 @@ Pellets is intended when you want html templating in plain javascript, without l
 
 Let's start with the bare minimum:
 
-    if(this.showHeader)
+    if(showHeader)
       <h1>This is a header</h1>
 
     // > pellets.compile(template)({ showHeader: true })
@@ -27,7 +27,7 @@ Any HTML embedded as its own statement will be parsed.
 
 Strings can be interpolated anywhere with the at(`@`) symbol, and are automatically appended to the output:
 
-    <div>@this.interpolated</div>
+    <div>@interpolated</div>
     for(var i=0; i<10; ++i) {
       @i
     }
@@ -39,14 +39,14 @@ Strings can be interpolated anywhere with the at(`@`) symbol, and are automatica
 
 All values interpolated with `@` are html-encoded. To print html you can double up to `@@`..
 
-    @@this.interpolated
+    @@interpolated
 
     // > pellets.compile(template)({ interpolated: "<br>" })
     // "<br>"
 
 or add an `html` value or function to the object.
 
-    @this.interpolated
+    @interpolated
 
     // > pellets.compile(template)({ interpolated: { html: "<br>" } })
     // "<br>"
@@ -123,7 +123,7 @@ Usage
     $ npm install pellets
     $ node
 
-    > var template = "<h1>@this.v</h1>";
+    > var template = "<h1>@v</h1>";
     > var pellets = require("pellets");
     > var method = pellets.compile(template);
     > console.log(method({ v: 123 }));
@@ -132,7 +132,7 @@ Usage
 ### Browser
 
     <script id='tmpl' type='text/pellet'>
-      <h1>@this.v</h1>
+      <h1>@v</h1>
     </script>
     <script src='https://raw.github.com/sciolist/pellets/master/browser/pellets.min.js'></script>
     <script>
@@ -157,7 +157,8 @@ The defaults are kept in `pellets.defaultOptions` and can be changed as needed:
 
     pellets.defaultOptions = {
       parse: {
-        interpolator: '@'  // changes the interpolation string
+        interpolator: '@',  // changes the interpolation string
+        bufferName: '__b'   // name of the array holding the output html
       }
     }
 
