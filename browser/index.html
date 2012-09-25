@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset=utf-8>
+    <script src=pellets.js></script>
+    <script>
+      function run() {
+        var scope = {
+          display: true,
+          message: "this is a message",
+          format: function(x) {
+            return "<li>" + x + "</li>"
+          }
+        };
+
+        var show = document.getElementById('s').checked;
+        var out = document.getElementById('o');
+        var template = document.getElementById('p').value;
+
+        try {
+          var generated = pellets.generate(template);
+          var fn = pellets.compileElement('p');
+          var result = fn(scope);
+        } catch(e) {
+          console && console.error(e);
+          out.innerHTML = e.toString().replace(/</g, "&lt;")
+          return;
+        }
+
+        var text = [
+          result,
+          show ? "<hr><pre>" + generated.replace(/</g, "&lt;") + "</pre>" : ""
+        ];
+        out.innerHTML = text.join("");
+      }
+    </script>
+  </head>
+  <body>
+    <textarea id=p cols=60 rows=15></textarea>
+
+    <div>
+      <button onclick="run()">Run</button>
+      <input type=checkbox id=s /> show generated js
+    </div>
+
+    <hr>
+    <div id=o></div>
+  </body>
+</html>

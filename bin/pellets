@@ -1,0 +1,85 @@
+#!/usr/bin/env sh
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+program=$0
+paths=()
+format='if(typeof global === "undefined") { global = window; }; global["script_$f"] = $s;'
+HELP="\
+Usage: $program [options] [(glob) ...]
+
+options:
+  -f, --format     add text to output files.
+                   can use the variables:
+                    \$f - name of the template
+                    \$s - generated method
+  -o, --out        path to write the output to.
+                   can use the variables:
+                    \$f - name of the template
+  --help           display this help
+"
+
+help() { echo -n "$HELP" >&2; exit 1; }
+help2() { echo "try '$program --help' for information." >&2; }
+verify() {
+  if [ $? -ne 0 ]
+  then
+    exit $?
+  fi
+}
+
+build_file() {
+  method=$(node $DIR/build.js "$file")
+  verify
+  result=${format//\$f/$file}
+  result=${result//\$s/$method}
+  
+  if [ ! $out ]
+  then
+    echo $result
+  else
+    path=${out//\$f/$file}
+    mkdir -p $( dirname $path )
+    echo $result > $path
+  fi
+}
+
+add_path() {
+  for f in $path
+  do
+    if [ ! -f $f ]
+    then
+      echo "$program: $f: No such file or directory" >&2
+      help2;
+      exit 3
+    fi
+    paths="${paths[@]} ${f}"
+  done
+}
+
+if [ $# = 0 ]; then help; fi
+while [ $# -ne 0 ]
+do
+  case $1 in
+    --help)
+      help ;;
+    -f | --format)
+      format="$2"
+      shift ;;
+    -o | --out)
+      out="$2"
+      shift ;;
+    -*)
+      echo "$program: invalid option $1" >&2
+      help2;
+      exit 2 ;;
+    *)
+      path=$1
+      add_path ;;
+  esac
+  shift
+done
+
+for i in ${paths[@]}
+  do
+    file=$i
+    build_file
+done
