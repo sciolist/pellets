@@ -157,6 +157,10 @@ A simple way of getting around this is precompiling the templates with the pelle
 
 The generated scripts have no dependencies at all.
 
+If that's not good enough, you can supply a `--run` json-argument to evaluate a template directly:
+
+    $ pellets test.tmpl --run '{ "some": "values" }' > template.html
+
 Options
 -----------------------
 

@@ -3,18 +3,18 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 program=$0
 paths=()
 opts="{}"
+run=""
 format='if(typeof global === "undefined") { global = window; }; global["script_$f"] = $s;'
 HELP="\
 Usage: $program [options] [(glob) ...]
 
 options:
-  -f, --format     add text to output files,
-                   can use the variables:
+  -f, --format     add text to output files, can use the variables:
                     \$f - name of the template
                     \$s - generated method
-  -o, --out        path to write the output to,
-                   can use the variables:
+  -o, --out        path to write the output to, can use the variables:
                     \$f - name of the template
+  -r, --run        give a scope to run the template in instead of compiling
   --opts           json parsing options parsing
   --help           display this help
 "
@@ -30,7 +30,7 @@ verify() {
 
 build_file() {
   set -f
-  method=$(node $DIR/build.js "$file" "$opts")
+  method=$(node $DIR/build.js "$file" "$opts" "$run")
   verify
   result="${format//\$f/$file}"
   result="${result//\$s/$method}"
@@ -70,6 +70,10 @@ do
       shift ;;
     -o | --out)
       out="$2"
+      shift ;;
+    -r | --run)
+      format="\$s"
+      run="$2"
       shift ;;
     --opts)
       opts="$2"
