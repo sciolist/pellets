@@ -1,10 +1,13 @@
 {
   "name": "pellets",
   "description": "Pellet templates for javascript",
-  "main": "pellets",
-  "version": "0.0.1",
+  "main": "index.js",
+  "version": "0.0.2",
   "engines": {
     "node": ">=0.4.0"
+  },
+  "bin": {
+    "pellets": "./bin/pellets"
   },
   "author": "Daniel Pihlstrom",
   "licenses": [

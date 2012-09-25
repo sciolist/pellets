@@ -138,6 +138,15 @@ Usage
       console.log(method({ v: 123 }));
     </script>
 
+### Precompiling
+
+Running pellets in the browser is fine and well, but it's a little heavier than one might prefer. 
+A simple way of getting around this is precompiling the templates with the pellets builder:
+
+    $ pellets templates/*.tmpl extra_template.tmpl --format "registerScript('$f', $s)" > templates.js
+
+The generated scripts have no dependencies at all.
+
 Gotchas
 -----------------------
 
