@@ -1,6 +1,8 @@
 
-Pellets v0.0.1
+Pellets
 =======================
+
+** Early testing **
 
 Modest javascript html-templates.
 
@@ -146,6 +148,22 @@ A simple way of getting around this is precompiling the templates with the pelle
     $ pellets templates/*.tmpl extra_template.tmpl --format "registerScript('$f', $s)" > templates.js
 
 The generated scripts have no dependencies at all.
+
+Options
+-----------------------
+
+Some parsing options can be specified by sending a second parameter into `pellets.compile` or `generate`.
+The defaults are kept in `pellets.defaultOptions` and can be changed as needed:
+
+    pellets.defaultOptions = {
+      parse: {
+        interpolator: '@'  // changes the interpolation string
+      }
+    }
+
+These options can be passed to the builder script:
+
+    $ pellets file.tmpl --opts '{ "parse": { "interpolator": "^" }'
 
 Gotchas
 -----------------------

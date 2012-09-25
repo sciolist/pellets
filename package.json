@@ -2,7 +2,7 @@
   "name": "pellets",
   "description": "Pellet templates for javascript",
   "main": "index.js",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "engines": {
     "node": ">=0.4.0"
   },
