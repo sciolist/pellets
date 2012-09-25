@@ -29,19 +29,21 @@ verify() {
 }
 
 build_file() {
+  set -f
   method=$(node $DIR/build.js "$file" "$opts")
   verify
-  result=${format//\$f/$file}
-  result=${result//\$s/$method}
-  
+  result="${format//\$f/$file}"
+  result="${result//\$s/$method}"
+
   if [ ! $out ]
   then
-    echo $result
+    printf "%s" "$result"
   else
-    path=${out//\$f/$file}
+    path="${out//\$f/$file}"
     mkdir -p $( dirname $path )
-    echo $result > $path
+    printf "%s" "$result" > $path
   fi
+  set +f
 }
 
 add_path() {
