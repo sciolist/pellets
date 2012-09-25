@@ -6,10 +6,18 @@ Pellets
 
 Modest javascript html-templates.
 
-Syntax
+What
 -----------------------
 
-Pellets is intended when you want html templating in plain javascript, without littering your code with unsightly `<% %>`'s.
+Pellets is an HTML templating library in javascript, it lets you seamlessly combine your presentation logic with markup:
+
+    var colors = ['red', 'green', 'blue'];
+    @people.map(function(person, i) {
+      <div style='color: @(colors[i])'>@person.name</div>
+    });
+
+Syntax
+-----------------------
 
 ### Rendering some HTML
 
