@@ -19,7 +19,7 @@ options:
   --help           display this help
 "
 
-help() { echo -n "$HELP" >&2; exit 1; }
+help() { echo "$HELP" >&2; exit 1; }
 help2() { echo "try '$program --help' for information." >&2; }
 verify() {
   if [ $? -ne 0 ]
