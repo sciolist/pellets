@@ -87,7 +87,11 @@ function output(fileName, result) {
     if(out[out.length-1] === "/" || (out.indexOf("$f") === -1 && paths.length > 1)) {
       file = path.join(file, fileName);
     }
-    try { fs.mkdirSync(path.dirname(file)); } catch(e) { }
+    var dir = path.relative(process.pwd, path.normalize(path.dirname(file))).split(path.sep);
+    for(var i=0; i<dir.length; ++i) {
+      var dirname = dir.slice(0, i + 1).join(path.sep);
+      try { fs.mkdirSync(dirname); } catch(e) { }
+    }
     fs.writeFileSync(file, result);
     return;
   }
