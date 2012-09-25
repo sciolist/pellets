@@ -392,19 +392,39 @@ process.binding = function (name) {
 });
 
 require.define("/lib/pellets.js",function(require,module,exports,__dirname,__filename,process,global){(function() {
-  function merge(x) {
-    var o = []
-    for(var i=0; i<x.length; ++i) {
+  exports.defaultOptions = {
+    parse: {
+      interpolator: '@',
+      bufferName: '__b'
+    }
+  }
+
+  function mergeResult(x) {
+    var o = [];
+    for(var i=0; x && i<x.length; ++i) {
       var n = x[i];
       if(n === undefined) continue;
       else if(n.html !== undefined) o.push(n.html.call ? n.html() : n.html);
-      else if(n.slice && !n.substr) o.push(merge(n));
+      else if(n.slice && !n.substr) o.push(mergeResult(n));
       else o.push(String(n).replace(/&(?!(\w+|\#\d+);)/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
     }
     return o.join('');
   }
 
+  function merge(dest) {
+    for(var i=1; i<arguments.length; ++i) {
+      var src = arguments[i];
+      if(!dest) dest = {};
+      for (var key in src) {
+        if(!src.hasOwnProperty(key)) continue;
+        dest[key] = typeof src[key] === 'object' ? merge(dest[key], src[key]) : src[key];
+      }
+    }
+    return dest;
+  }
+
   function generate(template, opts) {
+    opts = merge({}, exports.defaultOptions, opts);
     var parser = require("./parser")
       , gen = require("escodegen")
       , parsed = parser.parse(template, opts)
@@ -412,15 +432,14 @@ require.define("/lib/pellets.js",function(require,module,exports,__dirname,__fil
 
     var fn = [
       "(function(self) {",
-          "var __b = [], __m = (" + merge + ");",
-          code.toString(),
-          ";return __m(__b);",
+          "return (" + mergeResult + ")((function(self){" + (code.toString()) + "}).call(self||{},self||{}))",
       "})"
     ].join("");
     return fn;
   }
 
   function compile(template, opts) {
+    opts = merge({}, exports.defaultOptions, opts);
     var code = generate(template, opts);
     var fn   = eval(code);
     function result(self) {
@@ -977,6 +996,12 @@ parseStatement: true, parseSourceElement: true */
         };
     }
 
+    function isInterpolator(index) {
+      var ilen = extra.parse.interpolator.length;
+      if(ilen === 1) return source[index] === extra.parse.interpolator;
+      return source.substr(index, ilen) === extra.parse.interpolator;
+    }
+
     // 7.7 Punctuators
 
     function scanPunctuator() {
@@ -985,6 +1010,17 @@ parseStatement: true, parseSourceElement: true */
             ch2,
             ch3,
             ch4;
+
+        if (isInterpolator(index)) {
+            index += extra.parse.interpolator.length;
+            return {
+                type: Token.Punctuator,
+                value: extra.parse.interpolator,
+                lineNumber: lineNumber,
+                lineStart: lineStart,
+                range: [start, index]
+            };
+        }
 
         // Check for most common single-character punctuators.
 
@@ -1132,7 +1168,7 @@ parseStatement: true, parseSourceElement: true */
 
         // The remaining 1-character punctuators.
 
-        if ('@[]<>+-*%&|^!~?:=/'.indexOf(ch1) >= 0) {
+        if ('[]<>+-*%&|^!~?:=/'.indexOf(ch1) >= 0) {
             return {
                 type: Token.Punctuator,
                 value: nextChar(),
@@ -1515,7 +1551,7 @@ parseStatement: true, parseSourceElement: true */
                     "computed": false,
                     "object": {
                         "type": Syntax.Identifier,
-                        "name": "__b"
+                        "name": extra.parse.bufferName
                     },
                     "property": {
                         "type": Syntax.Identifier,
@@ -1530,11 +1566,11 @@ parseStatement: true, parseSourceElement: true */
     function parseAtExpression() {
         buffer = null;
 
-        var start = index + 1;
+        var start = index + extra.parse.interpolator.length;
         buffer = null;
-        expect("@");
+        expect(extra.parse.interpolator);
 
-        var useRaw = match("@");
+        var useRaw = match(extra.parse.interpolator);
         if(useRaw) lex();
 
         if(match("{")) {
@@ -1595,7 +1631,7 @@ parseStatement: true, parseSourceElement: true */
                 break;
             }
 
-            if(ch === "@") {
+            if(isInterpolator(index)) {
                 // handle <div>@i</div> style expressions
                 // within html tags.
                 tokens.push(createToken());
@@ -1680,14 +1716,14 @@ parseStatement: true, parseSourceElement: true */
         };
     }
 
-    function wrapHtmlFunction(fn) {
+    function wrapBlock(fn) {
         var createBuffer = {
             "type": Syntax.VariableDeclaration,
             "declarations": [{
                 "type": Syntax.VariableDeclarator,
                 "id": {
                     type: Syntax.Identifier,
-                    name: "__b"
+                    name: extra.parse.bufferName
                 },
                 "init": {
                     "type": Syntax.ArrayExpression,
@@ -1704,7 +1740,7 @@ parseStatement: true, parseSourceElement: true */
                 "computed": false,
                 "object": {
                     "type": Syntax.Identifier,
-                    "name": "__b"
+                    "name": extra.parse.bufferName
                 },
                 "property": {
                     "type": Syntax.Identifier,
@@ -1713,13 +1749,17 @@ parseStatement: true, parseSourceElement: true */
             },
             "consequent": {
                 "type": Syntax.ReturnStatement,
-                "argument": { type: "Identifier", "name": "__b" }
+                "argument": { type: "Identifier", "name": extra.parse.bufferName }
             }
         }
 
-        fn.body.splice(0, 0, createBuffer);
-        fn.body.push(returnBuffer);
-        return fn;
+        fn.splice(0, 0, createBuffer);
+        fn.push(returnBuffer);
+        return [{
+            type: Syntax.WithStatement,
+            object: { type: Syntax.Identifier, name: "this" },
+            body: { type: Syntax.BlockStatement, body: fn }
+        }]
     }
     // PELLETS END
 
@@ -3444,7 +3484,7 @@ parseStatement: true, parseSourceElement: true */
         }
 
         if(token.type === Token.Punctuator) {
-            if(token.value === "@") return parseAtExpression(token);
+            if(token.value === extra.parse.interpolator) return parseAtExpression(token);
             if(token.value === "<") return parseHtmlExpression(token);
         }
 
@@ -3539,7 +3579,7 @@ parseStatement: true, parseSourceElement: true */
 
         return {
             type: Syntax.BlockStatement,
-            body: sourceElements
+            body: wrapBlock(sourceElements)
         };
     }
 
@@ -3611,7 +3651,7 @@ parseStatement: true, parseSourceElement: true */
             type: Syntax.FunctionDeclaration,
             id: id,
             params: params,
-            body: wrapHtmlFunction(body)
+            body: body
         };
     }
 
@@ -3686,7 +3726,7 @@ parseStatement: true, parseSourceElement: true */
             type: Syntax.FunctionExpression,
             id: id,
             params: params,
-            body: wrapHtmlFunction(body)
+            body: body
         };
     }
 
@@ -3755,7 +3795,7 @@ parseStatement: true, parseSourceElement: true */
         strict = false;
         program = {
             type: Syntax.Program,
-            body: parseSourceElements()
+            body: wrapBlock(parseSourceElements())
         };
         return program;
     }
@@ -4195,8 +4235,9 @@ parseStatement: true, parseSourceElement: true */
         lastParenthesized = null;
         inFunctionBody = false;
 
-        extra = {};
+        extra = { parse: {} };
         if (typeof options !== 'undefined') {
+            if(options.parse) extra.parse = options.parse;
             extra.range = (typeof options.range === 'boolean') && options.range;
             extra.loc = (typeof options.loc === 'boolean') && options.loc;
             extra.raw = (typeof options.raw === 'boolean') && options.raw;
