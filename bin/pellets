@@ -1,96 +1,115 @@
-#!/usr/bin/env sh
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-program=$0
-paths=()
-opts="{}"
-run=""
-format='if(typeof global === "undefined") { global = window; }; global["script_$f"] = $s;'
-HELP="\
-Usage: $program [options] [(glob) ...]
+#!/usr/bin/env node
 
-options:
-  -f, --format     add text to output files, can use the variables:
-                    \$f - name of the template
-                    \$s - generated method
-  -o, --out        path to write the output to, can use the variables:
-                    \$f - name of the template
-  -r, --run        give a scope to run the template in instead of compiling
-  --opts           json parsing options parsing
-  --help           display this help
-"
+var prog = process.env._
+var HELP = [
+ "Usage: " + prog + " [options] [(glob) ...]"
+,""
+,"options:"
+,"  -f, --format     add text to output files, can use the variables:"
+,"                    \$f - name of the template"
+,"                    \$s - generated method"
+,"  -o, --out        path to write the output to, can use the variables:"
+,"                    \$f - name of the template"
+,"  -r, --run        give a scope to run the template in instead of compiling"
+,"  --opts           json parsing options parsing"
+,"  --help           display this help"
+,""].join("\n")
 
-help() { echo "$HELP" >&2; exit 1; }
-help2() { echo "try '$program --help' for information." >&2; }
-verify() {
-  if [ $? -ne 0 ]
-  then
-    exit $?
-  fi
+function help() { console.error(HELP); process.exit(1); }
+function crash(v, ex) {
+  console.error(prog + ": " + (v || "Error"));
+  if(ex) console.error("Error was: " + ex);
+  console.error("Write " + prog + " --help for instructions.");
+  process.exit(10);
 }
 
-build_file() {
-  set -f
-  method=$(node $DIR/build.js "$file" "$opts" "$run")
-  verify
-  result="${format//\$f/$file}"
-  result="${result//\$s/$method}"
+var fs = require('fs')
+  , pellets = require('../')
+  , path = require('path')
+  , glob = require('glob')
+  , format = "if(typeof global === 'undefined') { global = window; }; global['script_$f'] = $s;"
+  , paths  = []
+  , opts   = {}
+  , run    = null
+  , out    = null
+  , args   = process.argv.slice(2)
+  ;
 
-  if [ ! $out ]
-  then
-    printf "%s" "$result"
-  else
-    path="${out//\$f/$file}"
-    mkdir -p $( dirname $path )
-    printf "%s" "$result" > $path
-  fi
-  set +f
+while(args.length) {
+  var value = args.shift();
+  try {
+  switch(value) {
+    case "-f":
+    case "--format":
+      format = args.shift();
+      break;
+    case "-o":
+    case "--out":
+      out = args.shift();
+      break;
+    case "--opts":
+      opts = JSON.parse(args[0] || null);
+      args.shift();
+      break;
+    case "-r":
+    case "--run":
+      run = true;
+      if(args[0] && args[0][0] !== "-") {
+        run = JSON.parse(args[0] || null);
+        args.shift();
+      }
+      break;
+    case "--help":
+      help();
+      break;
+    default:
+      if(value[0] === "-") {
+        crash("unexpected option " + value);
+      }
+      var results = glob.sync(value);
+      if(!results.length) {
+        crash("no such file or folder " + value);
+      }
+      paths.push.apply(paths, results);
+      break;
+  }
+  } catch(e) {
+    crash("could not process " + value, e.message); 
+  }
 }
 
-add_path() {
-  for f in $path
-  do
-    if [ ! -f $f ]
-    then
-      echo "$program: $f: No such file or directory" >&2
-      help2;
-      exit 3
-    fi
-    paths="${paths[@]} ${f}"
-  done
+function output(fileName, result) {
+  var wrapped = format.replace(/\$s/g, result)
+                      .replace(/\$f/g, fileName);
+
+  if(out) {
+    var file = out.replace(/\$f/g, fileName);
+    if(out[out.length-1] === "/" || (out.indexOf("$f") === -1 && paths.length > 1)) {
+      file = path.join(file, fileName);
+    }
+    try { fs.mkdirSync(path.dirname(file)); } catch(e) { }
+    fs.writeFileSync(file, result);
+    return;
+  }
+  console.log(result);
 }
 
-if [ $# = 0 ]; then help; fi
-while [ $# -ne 0 ]
-do
-  case $1 in
-    --help)
-      help ;;
-    -f | --format)
-      format="$2"
-      shift ;;
-    -o | --out)
-      out="$2"
-      shift ;;
-    -r | --run)
-      format="\$s"
-      run="$2"
-      shift ;;
-    --opts)
-      opts="$2"
-      shift ;;
-    -*)
-      echo "$program: invalid option $1" >&2
-      help2;
-      exit 2 ;;
-    *)
-      path=$1
-      add_path ;;
-  esac
-  shift
-done
+function build(data) {
+  if(run !== null) {
+    return pellets.compile(data, opts)(run);
+  }
+  return pellets.generate(data, opts);
+}
 
-for i in ${paths[@]}
-  do
-    file=$i
-    build_file
-done
+if(paths.length) {
+  paths.map(function(v) {
+    var data = fs.readFileSync(v).toString(), result;
+    output(v, build(data));
+  })
+} else if(process.stdin.paused) {
+  process.stdin.on("data", function(data) {
+    output("stdin", build(data.toString()));
+  });
+  process.stdin.resume();
+} else help();
+
