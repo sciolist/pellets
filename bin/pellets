@@ -48,14 +48,14 @@ while(args.length) {
       out = args.shift();
       break;
     case "--opts":
-      opts = JSON.parse(args[0] || null);
+      opts = eval("(" + (args[0] || "{}") + ")");
       args.shift();
       break;
     case "-r":
     case "--run":
       run = true;
       if(args[0] && args[0][0] !== "-") {
-        run = JSON.parse(args[0] || null);
+        run = eval("(" + (args[0] || true) + ")");
         args.shift();
       }
       break;
