@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var prog = process.env._
+var prog = "pellets"; // process.env._
 var HELP = [
  "Usage: " + prog + " [options] [(glob) ...]"
 ,""
