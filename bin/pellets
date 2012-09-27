@@ -11,7 +11,7 @@ var HELP = [
 ,"  -o, --out        path to write the output to, can use the variables:"
 ,"                    \$f - name of the template"
 ,"  -r, --run        give a scope to run the template in instead of compiling"
-,"  --opts           json parsing options parsing"
+,"  --opts           json parsing options"
 ,"  --help           display this help"
 ,""].join("\n")
 
